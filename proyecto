@@ -1,0 +1,224 @@
+import os
+
+# Constantes
+IVA = 0.15
+
+# Base de datos
+productos = [
+    {"codigo": "P001", "nombre": "Laptop", "precio": 800.00},
+    {"codigo": "P002", "nombre": "Mouse Inalámbrico", "precio": 15.50},
+    {"codigo": "P003", "nombre": "Teclado Mecánico", "precio": 55.99},
+    {"codigo": "P004", "nombre": "Monitor 27''", "precio": 250.00},
+    {"codigo": "P005", "nombre": "Webcam HD", "precio": 30.00},
+]
+
+clientes = [
+    {"ruc": "1790000000001", "nombre": "Ana García"},
+    {"ruc": "0990000000001", "nombre": "Luis Pérez"}
+]
+
+def limpiar_pantalla():
+    """Limpia la pantalla de la consola"""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def pausa():
+    """Pausa la ejecución hasta que el usuario presione Enter"""
+    input("\nPresione Enter para continuar...")
+
+def buscar_por_codigo(codigo):
+    """Busca un producto por su código"""
+    return next((producto for producto in productos if producto['codigo'] == codigo), None)
+
+def buscar_por_ruc(ruc):
+    """Busca un cliente por RUC"""
+    return next((cliente for cliente in clientes if cliente['ruc'] == ruc), None)
+
+def mostrar_tabla(datos, columnas):
+    """Muestra una tabla formateada con los datos proporcionados"""
+    ancho_columnas = [15, 30, 15]
+    linea = "-" * sum(ancho_columnas)
+    
+    print(linea)
+    print("".join(f"{col:<{ancho}}" for col, ancho in zip(columnas, ancho_columnas)))
+    print(linea)
+    
+    for item in datos:
+        fila = []
+        for col in columnas:
+            if col.lower() in item:
+                valor = item[col.lower()]
+                if isinstance(valor, float):
+                    fila.append(f"{valor:.2f}")
+                else:
+                    fila.append(str(valor))
+            else:
+                fila.append("")
+        print("".join(f"{texto:<{ancho}}" for texto, ancho in zip(fila, ancho_columnas)))
+    
+    print(linea)
+
+def mostrar_productos_rapido():
+    """Muestra los productos de forma rápida para seleccionar durante facturación"""
+    print("\n--- PRODUCTOS DISPONIBLES ---")
+    print(f"{'CÓDIGO':<10} {'PRODUCTO':<25} {'PRECIO':>10}")
+    print("-" * 50)
+    for prod in productos:
+        print(f"{prod['codigo']:<10} {prod['nombre']:<25} {prod['precio']:>10.2f}")
+    print("-" * 50)
+
+def registrar_cliente():
+    """Registra un nuevo cliente"""
+    limpiar_pantalla()
+    print("👤 REGISTRAR CLIENTE")
+    
+    ruc = input("RUC/Cédula: ").strip()
+    if buscar_por_ruc(ruc):
+        print("❌ Cliente ya existe")
+        pausa()
+        return
+    
+    nombre = input("Nombre completo: ").strip().title()
+    clientes.append({"ruc": ruc, "nombre": nombre})
+    print("✅ Cliente registrado")
+    pausa()
+
+def mostrar_clientes():
+    """Muestra todos los clientes registrados"""
+    limpiar_pantalla()
+    print("👥 CLIENTES REGISTRADOS")
+    mostrar_tabla(clientes, ["RUC", "Nombre"])
+    pausa()
+
+def mostrar_productos():
+    """Muestra todos los productos disponibles"""
+    limpiar_pantalla()
+    print("📦 PRODUCTOS DISPONIBLES")
+    mostrar_tabla(productos, ["Código", "Nombre", "Precio"])
+    pausa()
+
+def generar_factura():
+    """Genera una factura para un cliente"""
+    limpiar_pantalla()
+    print("📝 GENERAR FACTURA")
+    
+    ruc = input("RUC del cliente: ").strip()
+    cliente = buscar_por_ruc(ruc)
+    
+    if not cliente:
+        print("❌ Cliente no encontrado")
+        pausa()
+        return
+    
+    items = []
+    while True:
+        limpiar_pantalla()
+        print("📝 GENERAR FACTURA")
+        print(f"Cliente: {cliente['nombre']} - RUC: {cliente['ruc']}")
+        print(f"Productos en factura: {len(items)}")
+        
+        # Mostrar productos disponibles CON SUS CÓDIGOS
+        mostrar_productos_rapido()
+        
+        codigo = input("\nIngrese CÓDIGO del producto (FIN para terminar): ").upper().strip()
+        
+        if codigo == "FIN":
+            break
+        
+        if not codigo:
+            print("❌ Debe ingresar un código")
+            pausa()
+            continue
+        
+        producto = buscar_por_codigo(codigo)
+        if not producto:
+            print(f"❌ Producto con código '{codigo}' no encontrado")
+            pausa()
+            continue
+        
+        try:
+            cantidad = int(input(f"Cantidad de '{producto['nombre']}': "))
+            if cantidad <= 0:
+                print("❌ Cantidad debe ser mayor a 0")
+                pausa()
+                continue
+        except ValueError:
+            print("❌ Cantidad inválida")
+            pausa()
+            continue
+        
+        subtotal = cantidad * producto['precio']
+        items.append({
+            "codigo": producto['codigo'],
+            "producto": producto['nombre'],
+            "cantidad": cantidad,
+            "precio": producto['precio'],
+            "subtotal": subtotal
+        })
+        print(f"✅ {cantidad}x {producto['nombre']} agregado a la factura")
+        pausa()
+    
+    if not items:
+        print("❌ No se agregaron productos a la factura")
+        pausa()
+        return
+    
+    # Cálculos finales
+    subtotal = sum(item['subtotal'] for item in items)
+    iva = subtotal * IVA
+    total = subtotal + iva
+    
+    # Mostrar factura final
+    limpiar_pantalla()
+    print("=" * 60)
+    print("FACTURA".center(60))
+    print("=" * 60)
+    print(f"Cliente: {cliente['nombre']}")
+    print(f"RUC: {cliente['ruc']}")
+    print("-" * 60)
+    
+    # Encabezado de la tabla de productos
+    print(f"{'COD.':<8} {'PRODUCTO':<20} {'CANT':^8} {'PRECIO':>10} {'TOTAL':>12}")
+    print("-" * 60)
+    
+    # Detalles de los productos
+    for item in items:
+        print(f"{item['codigo']:<8} {item['producto']:<20} {item['cantidad']:^8} {item['precio']:>10.2f} {item['subtotal']:>12.2f}")
+    
+    print("-" * 60)
+    print(f"SUBTOTAL: {subtotal:>46.2f}")
+    print(f"IVA ({IVA*100:.0f}%): {iva:>44.2f}")
+    print(f"TOTAL: {total:>48.2f}")
+    print("=" * 60)
+    
+    pausa()
+
+def menu_principal():
+    """Menú principal del sistema"""
+    opciones = {
+        '1': ("👤 Registrar Cliente", registrar_cliente),
+        '2': ("👥 Ver Clientes", mostrar_clientes),
+        '3': ("📦 Ver Productos", mostrar_productos),
+        '4': ("📝 Generar Factura", generar_factura),
+        '5': ("🚪 Salir", exit)
+    }
+    
+    while True:
+        limpiar_pantalla()
+        print("=" * 30)
+        print("SISTEMA DE FACTURACIÓN")
+        print("=" * 30)
+        
+        for key, (desc, _) in opciones.items():
+            print(f"{key}. {desc}")
+        
+        print("-" * 30)
+        opcion = input("Seleccione una opción: ").strip()
+        
+        if opcion in opciones:
+            opciones[opcion][1]()
+        else:
+            print("❌ Opción inválida")
+            pausa()
+
+if __name__ == "__main__":
+    menu_principal()
